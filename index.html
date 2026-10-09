@@ -170,11 +170,8 @@
         let currentUser = null;
         let chartInstance = null;
 
-        // Autenticação (Com o teste de clique adicionado)
+        // Autenticação 
         document.getElementById('btnLogin').addEventListener('click', () => {
-            alert("O botão foi clicado!"); 
-            console.log("Tentativa de login iniciada"); 
-            
             signInWithPopup(auth, new GoogleAuthProvider()).catch(error => alert("Erro ao iniciar sessão: " + error.message));
         });
         
@@ -385,13 +382,23 @@
                 const conf = typeMap[t.type];
                 const tr = document.createElement('tr');
                 tr.className = 'border-b border-gray-700 hover:bg-gray-750 transition-colors';
+                
+                // Formatação simples e segura para evitar o erro de sintaxe
+                let detalhesText = '-';
+                if (t.type === 'card') {
+                    detalhesText = '(' + t.installments + 'x de ' + formatCurrency(t.amount / t.installments) + ')';
+                }
+
+                let sinal = t.type === 'income' ? '+' : '-';
+                let corTexto = t.type === 'income' ? 'text-green-400' : 'text-red-400';
+
                 tr.innerHTML = `
                     <td class="py-3 px-2 text-gray-300">${dateObj.toLocaleDateString('pt-BR')}</td>
                     <td class="py-3 px-2 font-medium text-white">${t.description}</td>
                     <td class="py-3 px-2 ${conf.color}">${conf.label}</td>
-                    <td class="py-3 px-2 text-gray-400">${t.type === 'card' ? \`(\${t.installments}x de \${formatCurrency(t.amount/t.installments)})\` : '-'}</td>
-                    <td class="py-3 px-2 text-right font-medium ${t.type === 'income' ? 'text-green-400' : 'text-red-400'}">
-                        ${t.type === 'income' ? '+' : '-'}${formatCurrency(t.amount)}
+                    <td class="py-3 px-2 text-gray-400">${detalhesText}</td>
+                    <td class="py-3 px-2 text-right font-medium ${corTexto}">
+                        ${sinal}${formatCurrency(t.amount)}
                     </td>
                     <td class="py-3 px-2 text-right">
                         <button onclick="deleteTx('${t.id}')" class="text-gray-500 hover:text-red-500 transition-colors"><i class="fas fa-trash-alt"></i></button>
