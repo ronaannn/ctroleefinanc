@@ -154,7 +154,6 @@
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, where, onSnapshot, deleteDoc, doc, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // A SUA CONFIGURAÇÃO DO FIREBASE FOI INSERIDA AQUI
         const firebaseConfig = {
             apiKey: "AIzaSyB6OWzd9_yKK_paDJwFo7eatJDhyBNgeDQ",
             authDomain: "controle-financeiro-152b5.firebaseapp.com",
@@ -171,8 +170,11 @@
         let currentUser = null;
         let chartInstance = null;
 
-        // Autenticação
+        // Autenticação (Com o teste de clique adicionado)
         document.getElementById('btnLogin').addEventListener('click', () => {
+            alert("O botão foi clicado!"); 
+            console.log("Tentativa de login iniciada"); 
+            
             signInWithPopup(auth, new GoogleAuthProvider()).catch(error => alert("Erro ao iniciar sessão: " + error.message));
         });
         
