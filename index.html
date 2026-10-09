@@ -17,11 +17,23 @@
                 <i class="fas fa-wallet text-2xl text-white"></i>
             </div>
             <h1 class="text-2xl font-bold mb-2">FinançasPro</h1>
-            <p class="text-gray-400 mb-8 text-sm">Aceda para sincronizar os seus dados na nuvem.</p>
-            <button id="btnLogin" class="w-full bg-white text-gray-900 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-3 hover:bg-gray-100 transition-colors">
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5" alt="Google">
-                Entrar com o Google
-            </button>
+            <p class="text-gray-400 mb-6 text-sm">Inicie sessão ou crie uma conta.</p>
+
+            <form id="authForm" class="flex flex-col gap-4 text-left">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">E-mail</label>
+                    <input type="email" id="emailInput" required class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Palavra-passe</label>
+                    <input type="password" id="passwordInput" required minlength="6" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-blue-500">
+                </div>
+                <div class="flex gap-3 mt-2">
+                    <button type="button" id="btnEntrar" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Entrar</button>
+                    <button type="button" id="btnRegistar" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">Criar Conta</button>
+                </div>
+            </form>
+            <p id="authError" class="text-red-400 text-sm mt-4 hidden bg-red-900/30 p-2 rounded-lg border border-red-800/50"></p>
         </div>
     </div>
 
@@ -151,7 +163,8 @@
     <!-- Firebase e Lógica da Aplicação -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        // Importamos as funções de Email e Senha
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, where, onSnapshot, deleteDoc, doc, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -170,9 +183,39 @@
         let currentUser = null;
         let chartInstance = null;
 
-        // Autenticação 
-        document.getElementById('btnLogin').addEventListener('click', () => {
-            signInWithPopup(auth, new GoogleAuthProvider()).catch(error => alert("Erro ao iniciar sessão: " + error.message));
+        // Lógica de Autenticação por Email e Senha
+        const emailInput = document.getElementById('emailInput');
+        const passwordInput = document.getElementById('passwordInput');
+        const authError = document.getElementById('authError');
+
+        function mostrarErro(mensagem) {
+            authError.textContent = mensagem;
+            authError.classList.remove('hidden');
+        }
+
+        // Função para Entrar
+        document.getElementById('btnEntrar').addEventListener('click', () => {
+            authError.classList.add('hidden');
+            if (!emailInput.value || !passwordInput.value) {
+                return mostrarErro("Por favor, preencha o e-mail e a palavra-passe.");
+            }
+            
+            signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value)
+                .catch(error => mostrarErro("Erro ao entrar: Verifique os seus dados."));
+        });
+
+        // Função para Criar Conta
+        document.getElementById('btnRegistar').addEventListener('click', () => {
+            authError.classList.add('hidden');
+            if (!emailInput.value || !passwordInput.value) {
+                return mostrarErro("Por favor, preencha o e-mail e a palavra-passe.");
+            }
+            if (passwordInput.value.length < 6) {
+                return mostrarErro("A palavra-passe deve ter pelo menos 6 caracteres.");
+            }
+            
+            createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value)
+                .catch(error => mostrarErro("Erro ao criar conta. O e-mail pode já estar em uso."));
         });
         
         document.getElementById('btnSair').addEventListener('click', () => signOut(auth));
@@ -183,7 +226,11 @@
                 document.getElementById('loginScreen').classList.add('hidden');
                 document.getElementById('appScreen').classList.remove('hidden');
                 document.getElementById('appScreen').classList.add('flex');
-                document.getElementById('userName').textContent = user.displayName.split(' ')[0];
+                
+                // Como não usamos o Google, mostramos a primeira parte do e-mail como nome
+                const nomeDisplay = user.email.split('@')[0];
+                document.getElementById('userName').textContent = nomeDisplay;
+                
                 document.getElementById('date').valueAsDate = new Date();
                 loadData();
             } else {
@@ -191,6 +238,10 @@
                 document.getElementById('loginScreen').classList.remove('hidden');
                 document.getElementById('appScreen').classList.add('hidden');
                 document.getElementById('appScreen').classList.remove('flex');
+                // Limpar campos de login
+                emailInput.value = '';
+                passwordInput.value = '';
+                authError.classList.add('hidden');
             }
         });
 
@@ -279,10 +330,10 @@
             let income = 0, fixed = 0, misc = 0, card = 0;
 
             transactions.forEach(t => {
-                const tDate = new Date(t.date + 'T00:00:00'); // Tratar fuso horário local
+                const tDate = new Date(t.date + 'T00:00:00'); 
                 
                 if (t.type === 'income' && tDate.getMonth() === currentMonth) income += t.amount;
-                if (t.type === 'fixed') fixed += t.amount; // Assume-se que o gasto fixo se repete todos os meses
+                if (t.type === 'fixed') fixed += t.amount; 
                 if (t.type === 'variable' && tDate.getMonth() === currentMonth) misc += t.amount;
                 
                 if (t.type === 'card') {
@@ -314,7 +365,6 @@
             let projectionData = [];
             let labels = [];
 
-            // Assume-se que o rendimento atual se mantém nos meses seguintes
             let monthlyIncome = transactions
                 .filter(t => t.type === 'income' && new Date(t.date + 'T00:00:00').getMonth() === currentMonth)
                 .reduce((acc, curr) => acc + curr.amount, 0);
@@ -383,7 +433,6 @@
                 const tr = document.createElement('tr');
                 tr.className = 'border-b border-gray-700 hover:bg-gray-750 transition-colors';
                 
-                // Formatação simples e segura para evitar o erro de sintaxe
                 let detalhesText = '-';
                 if (t.type === 'card') {
                     detalhesText = '(' + t.installments + 'x de ' + formatCurrency(t.amount / t.installments) + ')';
